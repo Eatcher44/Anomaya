@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "suivi-animaux",
+    "slug": "suivi-animaux",
+    "version": "1.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "suivianimaux",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.suivianimaux",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification", "fetch"],
+        "NSUserTrackingUsageDescription": "L'identifiant publicitaire peut être utilisé pour afficher des publicités pertinentes. Aucune donnée sensible n'est partagée."
+      },
+      "runtimeVersion": { "policy": "appVersion" }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.suivianimaux",
+      "runtimeVersion": "1.0.2",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            {
+              "scheme": "com.googleusercontent.apps.572516947130-e8r14o7d7k91k5ea8fcd8kbt2j4bvcmn",
+              "host": "oauth2redirect",
+              "path": "/google"
+            }
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      ["expo-notifications", { "color": "#4a90e2", "sounds": [] }],
+      "expo-web-browser",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1709670714425844~9179466263",
+          "iosAppId": "ca-app-pub-1709670714425844~6925085437"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": { "projectId": "76fac5eb-db94-4a6f-a160-5d843fc5f12c" }
+    },
+    "owner": "eatcher",
+    "updates": {
+      "url": "https://u.expo.dev/76fac5eb-db94-4a6f-a160-5d843fc5f12c"
+    }
+  }
+}
