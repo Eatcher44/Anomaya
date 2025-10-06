@@ -1,163 +1,98 @@
-// src/screens/auth/SignInScreen.js
-import React, { useRef, useState } from 'react';
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-} from 'react-native';
-import styles from '../../styles/styles';
-import { useAuth } from '../../context/AuthContext';
+// SignInScreen.js
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
-WebBrowser.maybeCompleteAuthSession();
+const WEB_CLIENT_ID = '572516947130-7cl0hf0hdiav326sls62ai1srn9mv90n.apps.googleusercontent.com'; 
+// ⚠️ C'est le "Client ID" de type Web depuis Google Cloud Console (écran OAuth > Identifiants).
+// Ce n'est PAS l'Android client ID. Le SDK google-signin côté RN attend le webClientId pour extraire un idToken compatible Firebase.
 
-const WEB_CLIENT_ID =
-  '572516947130-7cl0hf0hdiav326sls62ai1srn9mv90n.apps.googleusercontent.com';
+export default function SignInScreen() {
+  const [loading, setLoading] = useState(false);
 
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-};
+  // Configure Google Sign-In une seule fois
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: WEB_CLIENT_ID,
+      offlineAccess: true,
+      forceCodeForRefreshToken: false,
+    });
+  }, []);
 
-import GoogleG from '../../../assets/google-g.png';
-
-export default function SignInScreen({ navigation }) {
-  const { signInWithEmail, signInWithGoogleIdToken } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const googleBusyRef = useRef(false);
-
-  async function onEmailLogin() {
+  const onGooglePress = useCallback(async () => {
     try {
-      await signInWithEmail(email.trim(), password);
-    } catch (e) {
-      Alert.alert('Connexion', e?.message || 'Impossible de se connecter.');
-    }
-  }
+      setLoading(true);
 
-  async function onGoogle() {
-    if (googleBusyRef.current) return;
-    googleBusyRef.current = true;
+      // Vérifie Google Play Services (indispensable en prod Play Store)
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-    try {
-      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
-      const nonce = Math.random().toString(36).slice(2);
-      const scope = encodeURIComponent('openid profile email');
-
-      const authUrl =
-        `${discovery.authorizationEndpoint}` +
-        `?client_id=${encodeURIComponent(WEB_CLIENT_ID)}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&response_type=id_token` +
-        `&scope=${scope}` +
-        `&nonce=${encodeURIComponent(nonce)}` +
-        `&prompt=select_account`;
-
-      const result = await AuthSession.startAsync({ authUrl, returnUrl: redirectUri });
-
-      console.log('[Google AuthSession]', JSON.stringify(result, null, 2));
-
-      if (result.type === 'success') {
-        const idToken = result.params?.id_token;
-        if (!idToken) throw new Error('Aucun id_token reçu depuis Google.');
-        await signInWithGoogleIdToken(idToken);
-      } else if (result.type === 'dismiss') {
-        // L’utilisateur a fermé la webview
-      } else {
-        const msg =
-          result.params?.error_description ||
-          result.params?.error ||
-          result.error ||
-          'Échec Google';
-        throw new Error(msg);
+      // Lance le flux Google natif
+      const { idToken } = await GoogleSignin.signIn();
+      if (!idToken) {
+        throw new Error('Pas de idToken retourné par Google.');
       }
+
+      // Crée la cred Firebase à partir du idToken Google
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+      // Connecte l’utilisateur à Firebase
+      await auth().signInWithCredential(googleCredential);
+
+      // Optionnel: ici tu peux naviguer vers l’écran Home…
+      // navigation.replace('Home');
     } catch (e) {
-      Alert.alert('Google', e?.message || 'Connexion Google indisponible.');
+      // Gestion fine des erreurs courantes
+      if (e?.code === statusCodes.SIGN_IN_CANCELLED) {
+        // L’utilisateur a annulé — ne rien afficher d’alarmant
+        return;
+      }
+      if (e?.code === statusCodes.IN_PROGRESS) {
+        // Un flux est déjà en cours
+        return;
+      }
+      if (e?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Mise à jour requise', 'Google Play Services n’est pas disponible ou doit être mis à jour.');
+        return;
+      }
+
+      // Autres erreurs (y compris config/OAuth/clé SHA manquante)
+      console.log('Google sign-in error:', e);
+      Alert.alert('Connexion Google', e?.message ?? 'Une erreur est survenue.');
     } finally {
-      googleBusyRef.current = false;
+      setLoading(false);
     }
-  }
+  }, []);
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: 40 }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={[styles.titre, { marginBottom: 24 }]}>Bienvenue</Text>
-
-      <TextInput
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 10,
-          padding: 12,
-          backgroundColor: '#fff',
-          marginBottom: 10,
-        }}
-      />
-      <TextInput
-        placeholder="Mot de passe"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 10,
-          padding: 12,
-          backgroundColor: '#fff',
-        }}
-      />
-
-      {/* Connexion email */}
-      <TouchableOpacity
-        onPress={onEmailLogin}
-        style={[styles.btnPrimary, { marginTop: 12 }]}
-        activeOpacity={0.9}
-      >
-        <Text style={styles.btnPrimaryText}>Se connecter</Text>
-      </TouchableOpacity>
-
-      {/* Bouton Google */}
-      <TouchableOpacity
-        onPress={onGoogle}
-        activeOpacity={0.9}
-        style={{
-          marginTop: 10,
-          height: 48,
-          borderRadius: 12,
-          backgroundColor: '#DB4437',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-          paddingHorizontal: 14,
-        }}
-      >
-        <Image
-          source={GoogleG}
-          style={{ width: 20, height: 20, marginRight: 10 }}
-          resizeMode="contain"
-        />
-        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>
-          Continuer avec Google
-        </Text>
-      </TouchableOpacity>
+    <View style={styles.container}>
+      <Text style={styles.title}>Connexion</Text>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('SignUp')}
-        style={{ alignSelf: 'center', marginTop: 16 }}
+        onPress={onGooglePress}
+        style={[styles.button, loading && styles.buttonDisabled]}
+        disabled={loading}
+        activeOpacity={0.8}
       >
-        <Text style={{ color: '#164C88', fontWeight: '700' }}>Créer un compte</Text>
+        {loading ? (
+          <ActivityIndicator />
+        ) : (
+          <Text style={styles.buttonText}>Continuer avec Google</Text>
+        )}
       </TouchableOpacity>
-    </KeyboardAvoidingView>
+
+      <Text style={styles.hint}>
+        Assurez-vous d’avoir bien configuré l’ID client Web et les empreintes SHA dans Firebase.
+      </Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
+  button: { backgroundColor: '#000', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  hint: { marginTop: 16, fontSize: 12, color: '#666', textAlign: 'center' },
+});
