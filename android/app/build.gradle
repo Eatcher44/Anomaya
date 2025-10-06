@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services" // ➜ AJOUT : plugin Google Services requis pour Firebase
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
@@ -44,7 +45,7 @@ android {
         applicationId 'com.anonymous.suivianimaux'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
+        versionCode 6
         versionName "1.0.3"
     }
 
@@ -126,4 +127,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // ❗️NE RIEN AJOUTER pour Firebase ici si tu utilises @react-native-firebase/auth.
+    // Le module gère ses propres dépendances. Évite d’ajouter un BoM/dépendances Firebase en doublon.
 }
