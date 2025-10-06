@@ -20,7 +20,5 @@ yarn-error.log*
 
 # Secrets
 google-service-account.json
-GoogleService-Info.plist
-google-services.json
 .env
 .env.*

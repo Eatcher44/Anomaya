@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "572516947130",
+    "project_id": "anonamya",
+    "storage_bucket": "anonamya.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572516947130:android:223a9eb44b223ca1529e83",
+        "android_client_info": {
+          "package_name": "com.anonymous.suivianimaux"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "572516947130-e8r14o7d7k91k5ea8fcd8kbt2j4bvcmn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.suivianimaux",
+            "certificate_hash": "157aa16a2756c187a2905e2bb673f7d7e2073d56"
+          }
+        },
+        {
+          "client_id": "572516947130-7cl0hf0hdiav326sls62ai1srn9mv90n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArDXCQck8xA-yCuvUTEGD4PL7pKC1Ma6U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "572516947130-7cl0hf0hdiav326sls62ai1srn9mv90n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "572516947130-j4ja9sg6cqbnud0m846gmp8nik0n3kpn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.anonymous.suivianimaux"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
