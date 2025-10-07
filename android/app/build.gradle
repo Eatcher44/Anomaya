@@ -45,7 +45,7 @@ android {
         applicationId 'com.anonymous.suivianimaux'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
+        versionCode 7
         versionName "1.0.3"
     }
 
