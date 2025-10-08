@@ -1,98 +1,117 @@
-// SignInScreen.js
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+// src/screens/auth/SignInScreen.js
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import auth from '@react-native-firebase/auth';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-const WEB_CLIENT_ID = '572516947130-7cl0hf0hdiav326sls62ai1srn9mv90n.apps.googleusercontent.com'; 
-// ⚠️ C'est le "Client ID" de type Web depuis Google Cloud Console (écran OAuth > Identifiants).
-// Ce n'est PAS l'Android client ID. Le SDK google-signin côté RN attend le webClientId pour extraire un idToken compatible Firebase.
-
-export default function SignInScreen() {
-  const [loading, setLoading] = useState(false);
-
-  // Configure Google Sign-In une seule fois
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: WEB_CLIENT_ID,
-      offlineAccess: true,
-      forceCodeForRefreshToken: false,
-    });
-  }, []);
-
-  const onGooglePress = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      // Vérifie Google Play Services (indispensable en prod Play Store)
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-      // Lance le flux Google natif
-      const { idToken } = await GoogleSignin.signIn();
-      if (!idToken) {
-        throw new Error('Pas de idToken retourné par Google.');
-      }
-
-      // Crée la cred Firebase à partir du idToken Google
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-
-      // Connecte l’utilisateur à Firebase
-      await auth().signInWithCredential(googleCredential);
-
-      // Optionnel: ici tu peux naviguer vers l’écran Home…
-      // navigation.replace('Home');
-    } catch (e) {
-      // Gestion fine des erreurs courantes
-      if (e?.code === statusCodes.SIGN_IN_CANCELLED) {
-        // L’utilisateur a annulé — ne rien afficher d’alarmant
-        return;
-      }
-      if (e?.code === statusCodes.IN_PROGRESS) {
-        // Un flux est déjà en cours
-        return;
-      }
-      if (e?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Mise à jour requise', 'Google Play Services n’est pas disponible ou doit être mis à jour.');
-        return;
-      }
-
-      // Autres erreurs (y compris config/OAuth/clé SHA manquante)
-      console.log('Google sign-in error:', e);
-      Alert.alert('Connexion Google', e?.message ?? 'Une erreur est survenue.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
-
-      <TouchableOpacity
-        onPress={onGooglePress}
-        style={[styles.button, loading && styles.buttonDisabled]}
-        disabled={loading}
-        activeOpacity={0.8}
-      >
-        {loading ? (
-          <ActivityIndicator />
-        ) : (
-          <Text style={styles.buttonText}>Continuer avec Google</Text>
-        )}
-      </TouchableOpacity>
-
-      <Text style={styles.hint}>
-        Assurez-vous d’avoir bien configuré l’ID client Web et les empreintes SHA dans Firebase.
-      </Text>
-    </View>
-  );
+function isValidEmail(e) {
+  return /^\S+@\S+\.\S+$/.test(e);
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
-  button: { backgroundColor: '#000', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  hint: { marginTop: 16, fontSize: 12, color: '#666', textAlign: 'center' },
-});
+export default function SignInScreen({ navigation }) {
+  const [email, setEmail] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = useCallback(async () => {
+    const e = email.trim().toLowerCase();
+    const p = pwd;
+
+    if (!e || !isValidEmail(e)) {
+      Alert.alert('E-mail invalide', 'Merci de renseigner un e-mail valide.');
+      return;
+    }
+    if (!p) {
+      Alert.alert('Mot de passe requis', 'Merci de renseigner un mot de passe.');
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await auth().signInWithEmailAndPassword(e, p);
+      // onAuthStateChanged dans App.js basculera vers Home automatiquement
+    } catch (err) {
+      console.warn('SignIn error:', err);
+      let msg = "Impossible de se connecter.";
+      switch (err?.code) {
+        case 'auth/invalid-email': msg = "L'e-mail est invalide."; break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password': msg = "Identifiants incorrects."; break;
+        case 'auth/too-many-requests': msg = "Trop de tentatives, réessayez plus tard."; break;
+        case 'auth/network-request-failed': msg = "Problème de réseau."; break;
+      }
+      Alert.alert('Erreur', msg);
+    } finally {
+      setBusy(false);
+    }
+  }, [email, pwd]);
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, justifyContent: 'center', backgroundColor: '#fff' }}
+      behavior={Platform.select({ ios: 'padding', android: undefined })}
+    >
+      <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 6, textAlign: 'center' }}>Connexion</Text>
+        <Text style={{ textAlign: 'center', color: '#555', marginBottom: 16 }}>
+          Accède à tes données sur n’importe quel appareil.
+        </Text>
+
+        <View style={{ gap: 12 }}>
+          <View>
+            <Text style={{ marginBottom: 6, fontWeight: '600' }}>E-mail</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="ex: toi@mail.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, backgroundColor: '#fff' }}
+            />
+          </View>
+
+          <View>
+            <Text style={{ marginBottom: 6, fontWeight: '600' }}>Mot de passe</Text>
+            <TextInput
+              value={pwd}
+              onChangeText={setPwd}
+              placeholder="Ton mot de passe"
+              secureTextEntry
+              textContentType="password"
+              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 12, backgroundColor: '#fff' }}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={onSubmit}
+            disabled={busy}
+            style={[
+              { backgroundColor: '#000', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+              busy && { opacity: 0.6 },
+            ]}
+            activeOpacity={0.9}
+          >
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Se connecter</Text>}
+          </TouchableOpacity>
+
+          <View style={{ alignItems: 'center', marginTop: 14 }}>
+            <TouchableOpacity onPress={() => navigation.replace('SignUp')} activeOpacity={0.8}>
+              <Text style={{ color: '#007bff' }}>Pas de compte ? Créer un compte</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
